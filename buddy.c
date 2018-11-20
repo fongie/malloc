@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/mman.h>
-#include <stdbool.h>
 #include <assert.h>
+#include <errno.h>
 
 #define MIN 5
 #define LEVELS 8
@@ -17,23 +18,8 @@ struct head {
     struct head *prev;
 };
 
-struct lvl {
-    short int value;
-    struct head *blocks;
-    struct lvl *next;
-    struct lvl *prev;
-}
+struct head *flists[LEVELS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL, NULL};
 
-void makelevels(struct lvl *start) {
-    struct lvl *current = start;
-    for (int i = 0; i < LEVELS; i++) {
-        current->value = i;
-        current->next = 
-        start->next =
-    }
-}
-
-struct head *flists[LEVELS] = {NULL};
 
 struct head *new() {
     struct head *new = (struct head *) mmap(NULL,
@@ -123,15 +109,20 @@ void test() {
 }
 
 struct head *find(int level) {
-    int i = level - 1;
+    int i = level;
+    printf("hej");
     while (flists[i] == NULL) {
         i++;
-        if (i > LEVELS) {
+        if (i > LEVELS-1) {
             return NULL; //no free memory in list
         }
     }
     struct head *freeblock = flists[i]; //take first free block in list
-    flists[i] = freeblock->next; //checkfor or null?
+    if (freeblock->next == NULL) {
+        flists[i] = NULL;
+    } else {
+        flists[i] = freeblock->next; //checkfor or null?
+    }
 
     while (i != level) {
         printf("%d", i);
@@ -141,7 +132,9 @@ struct head *find(int level) {
         struct head *buddyToInsert = buddy(freeblock); //find buddy to be free
         buddyToInsert->status = Free;
         buddyToInsert->next = flists[i]; //buddy will be first in list on level i
-        flists[i]->prev = buddyToInsert; //previous first block will have buddy as previous
+        if (flists[i] != NULL) {
+            flists[i]->prev = buddyToInsert; //previous first block will have buddy as previous
+        }
         flists[i] = buddyToInsert; //buddy is first in list
     }
     return freeblock;
@@ -152,31 +145,44 @@ void *balloc(size_t size) {
         return NULL;
     }
     int lvl = level(size);
-    printf("%d", lvl);
+    //printf("%d", lvl);
     struct head *taken = find(lvl);
     return withoutHead(taken);
 }
 
 /*
-void bfree(void *memory) {
-    if(memory != NULL) {
-        struct head *block = withHead(memory);
-        insert(block);
-    }
-    return;
-}
-*/
+   void bfree(void *memory) {
+   if(memory != NULL) {
+   struct head *block = withHead(memory);
+   insert(block);
+   }
+   return;
+   }
+   */
 
 int main() {
-    struct head* start = new();
+    printf("%d\n", level(30));
 
+    struct head* start = new();
+    flists[7] = start;
+
+    printf("%p", flists[7]);
+
+    if (flists[7] == NULL) {
+        printf("jag är null");
+    } else {
+        printf("inte null");
+    }
+
+    printf("%d\n",flists[7]->level);
     printf("\nBlock: %p\n", start);
-    flists[5] = start;
-    struct head* test = balloc(30);
+    //struct head* h = balloc(0);
+    //printf("\nBlock: %p\n", h);
+    size_t size = 2;
+    struct head* test = balloc(size);
     printf("\nBlock: %p\n", test);
 
-    int i = 0;
-    while (flists[i] != NULL) {
-        printf("%p\n", flists[i]);
-    }
+    for (int i=0;i<8;i++)
+        printf("\n%p", flists[i]);
+
 }
