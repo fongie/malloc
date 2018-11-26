@@ -323,8 +323,10 @@ void test2() {
     printf("Dessa borde vara samma: %p %p\n", start, flists[7]);
 }
 
+/*
 int main() {
     //test();
     test2();
     return 0;
 }
+*/
