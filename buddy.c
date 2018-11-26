@@ -10,6 +10,8 @@
 #define LEVELS 8   
 #define PAGE 4096
 
+int initialized = 0;
+
 enum flag {Free = 0, Taken = 1};
 
 
@@ -134,7 +136,14 @@ struct head *find(int level) {
 
 
 void *balloc(size_t size) {
+    if (initialized == 0) {
+        flists[LEVELS-1] = new();
+        initialized = 1;
+    }
     if( size == 0 ){
+        return NULL;
+    }
+    if ( size > PAGE ) {
         return NULL;
     }
     int index = level(size);
@@ -177,17 +186,17 @@ void insert(struct head *block) {
     // for you to implement
     // vilken level är du på?
     int level = block->level;
-    printf("INSERT on level: %d\n", level);
+    //printf("INSERT on level: %d\n", level);
 
     //har du nån buddy som är fri?
     struct head* bud = buddy(block);
 
-    printf("\nBlock: %p status %d\n", block, block->status);
+    //printf("\nBlock: %p status %d\n", block, block->status);
     if (level == LEVELS-1) {
         flists[LEVELS-1] = block;
         return;
     }
-    printf("Buddy: %p status %d level: %d\n", bud, bud->status, bud->level);
+    //printf("Buddy: %p status %d level: %d\n", bud, bud->status, bud->level);
 
     if ((*bud).status == Free) {
         //då lägg ihop dom och gör samma sak på nivån över
@@ -214,6 +223,12 @@ void bfree(void *memory) {
     return;
 }
 
+void clearMemory() {
+    for (int i = 0; i < LEVELS; i++) {
+        flists[i] = NULL;
+    }
+    initialized = 0;
+}
 
 // Test sequences
 
