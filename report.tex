@@ -7,7 +7,7 @@
 
 \begin{document}
 
-\title{\vspace{-3.0cm}The Buddy Algorithm \\
+\title{\vspace{-3.3cm}The Buddy Algorithm \\
 \medskip
 \large
 ID1206 Operativsystem }
@@ -16,13 +16,13 @@ ID1206 Operativsystem }
 \maketitle
 
 
-\section{Introduction}
+\section{Background}
 
-Managing memory is one of the operating system's most important duties and of course as such the way it is implemented in different operating systems have seen changes and improvements over the years. The issue at hand is how most efficiently to divide, hand out, and free, memory space of different size, since different programs will need different amounts of memory.
+Managing memory is one of the operating system's most important duties and of course as such the way it is implemented in different operating systems have seen many changes and improvements over the years. The issue at hand is how to most efficiently divide, hand out, and free, memory space of different sizes, since different programs will need different amounts of memory.
 
-At its core most implementations think of memory in terms of blocks. Memory is somehow divided into blocks and distributed to those who ask for it. To do this, you need some sort of data structures to keep track of what is going on, and algorithms to handle dividing, handing out, and freeing memory. When freeing memory, you also have to \textit{coalesce} it, that means that if space is freed next to more free space, both free spaces should be combined into one large block of free space.
+At its core most implementations think of memory in terms of blocks. These blocks are distributed to those who ask for it. To do this, you need some sort of data structures to keep track of what is going on, and algorithms to handle dividing, handing out, and freeing memory. When freeing memory, you also have to \textit{coalesce} it, that means that if space is freed next to more free space, both free spaces should be combined into one large block of free space.
 
-When constructing these data structures and algorithms there is one frequent problem, and that is fragmented memory. This means, in essence, that you are not able to use all available memory, because of inefficient division and/or allocation of memory blocks. For example, if a program wants 8 bytes of memory, and the operating system gives them a block of 16 bytes, no other program can use the excess 8 bytes that are not used in that block of memory. This phenomena is called \textit{fragmentation} and it comes in two ways: internal and external fragmentation. Internal fragmentation is the example just described, where a used memory block contains free memory. External fragmentation occurs when there is free space in between distributed memory blocks, which is too small to be used by other programs.
+When constructing these data structures and algorithms there is one frequent problem, and that is fragmented memory. This means, in essence, that you are not able to use all available memory, because of inefficient division and/or allocation of memory blocks. For example, if a program wants 8 bytes of memory, and the operating system gives them a block of 16 bytes, no other program can use the excess 8 bytes that are not used in that block of memory. This phenomena is called \textit{fragmentation} and it comes in two ways: internal and external fragmentation. Internal fragmentation is the example just described, where a used memory block contains free memory. External fragmentation occurs when there is free space in between distributed memory blocks that is too small to be used by other programs.
 
 One strategy for allocating memory is the \textit{Buddy Algorithm}, or buddy allocation, whose main strength is coalescing, described above. In this strategy, when a request for memory is made, the algorithm divides free memory in blocks of two until reaching the nearest available block that the requested memory fits in and returns it to the user. When freeing the memory, the algorithm will check to see if the "buddy", the other free block that was created in the last split, is also free, and if it is, the algorithm will merge the buddies together, and keep doing that until the buddy is not free.
 
@@ -36,7 +36,7 @@ In this assignment, we were given the task of implementing a memory allocating l
 
 \subsection{Data Structures}
 
-There are two main data structures used in this implementation. The first is a \textit{free list}, an array, with one slot for each level in the binary memory tree. That is, depending on the maximum size of a memory block and the minimum, there will be a certain amount of possible levels from the largest block to the smallest block. Each level will have one slot in the array.
+There are two main data structures used in this implementation. The first is a \textit{free list}, an array, with one slot for each level in the binary memory tree. That is, depending on the maximum and minimum size of a memory block, there will be a certain amount of possible levels from the largest block to the smallest block. Each level will have one slot in the array.
 
 The second data structure is the \textit{block header}, which is contained in each memory block, and has information on whether it is taken or free, what level it is on, and it is also part of a double-linked list. The double-linked list is necessary because there may be many free blocks at a certain level. This means that at each slot in the free list, you find the first block in a double-linked list of free blocks at that level.
 
@@ -72,8 +72,8 @@ Our strategy in pseudo code:
 
 \noindent \code{
 	insert(struct head *block) \{ \\
-\hspace*{2em}	//which level are you? \\
-\hspace*{2em}	//who is your buddy? \\
+\hspace*{2em}	level = block->level //which level are you? \\
+\hspace*{2em}	buddy = buddy(block) //who is your buddy? \\
 \hspace*{2em}	if buddy is free \{ \\
 \hspace*{4em}		mergedBlock = merge(block,buddy) \\
 \hspace*{4em}		mergedBlock->level = level+1 \\
@@ -81,7 +81,7 @@ Our strategy in pseudo code:
 \hspace*{4em}		insert(mergedBlock) //recursive to keep merging until buddy not free \\
 \hspace*{4em}		return \\
 \hspace*{2em}	\} else \{ \\
-\hspace*{4em}		//place block in free list \\
+\hspace*{4em}		finalInsertInFreeList(block) //place block in free list \\
 \hspace*{2em}	\} \\
 	\}
 }
@@ -127,11 +127,6 @@ When some blocks have already been allocated, these algorithms do not have to wo
 
 Regarding size for \code{balloc}, in two out of three different allocations the bigger sizes are handled faster than smaller ones. This makes sense for when no blocks are allocated and when few are, because when you ask for larger sizes the algorithm can only go so far up in level before it either has to find a free block, or no free block. For \code{bfree}, results are the opposite. This is strange, because that algorithm should also work faster for larger blocks, for the same reason as above, that for larger blocks it never has to merge the maximum number of blocks, while it might happen for smaller blocks.
 
-The results are mostly as expected, and where they are not, the benchmarking program can probably be blamed. The benchmarking program could be improved to more randomly select which blocks to free, by for example storing allocated blocks in a list. Due to time constraints this was not implemented, which means that when freeing blocks, the double-linked list does not have be traversed in the \code{bfree} function, when removing a block from the free list. This operation should be quite costly, probably the most costly because it is the only time we are traversing a list, not just handling the head of the list, and this might not be reflected in the results that we got.
-
-\section{References}
-
-Kurslitt
-Instruktionerna
+The results are mostly as expected, and where they are not, the benchmarking program can probably be blamed. The benchmarking program could be improved to more randomly select which blocks to free, by for example storing allocated blocks in a list. Due to time constraints this was not implemented, which means that when freeing blocks, the double-linked list does not have be traversed in the \code{bfree} function, when removing a block from the free list. This operation should be quite costly, probably the most costly because it is the only time we are traversing a list, not just handling the head of the list. This might not be reflected in the results that we got.
 
 \end{document}
