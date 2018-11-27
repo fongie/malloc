@@ -1,5 +1,7 @@
 \documentclass{article}
 
+\def\code#1{\texttt{#1}}
+
 \begin{document}
 
 \title{The Buddy Algorithm \\
@@ -14,10 +16,29 @@ ID1206 Operativsystem }
 
 \section{Introduction}
 
+Managing memory is one of the operating system's most important duties and of course as such the way it is implemented in different operating systems have seen changes and improvements over the years. The issue at hand is how most efficiently to divide, hand out, and free, memory space of different size, since different programs will need different amounts of memory.
+
+At its core most implementations think of memory in terms of blocks. Memory is somehow divided into blocks and distributed to those who ask for it. To do this, you need some sort of data structures to keep track of what is going on, and algorithms to handle dividing, handing out, and freeing memory. When freeing memory, you also have to \textit{coalesce} it, that means that if space is freed next to more free space, both free spaces should be combined into one large block of free space.
+
+When constructing these data structures and algorithms there is one frequent problem, and that is fragmented memory. This means, in essence, that you are not able to use all available memory, because of inefficient division and/or allocation of memory blocks. For example, if a program wants 8 bytes of memory, and the operating system gives them a block of 16 bytes, no other program can use the excess 8 bytes that are not used in that block of memory. This phenomena is called \textit{fragmentation} and it comes in two ways: internal and external fragmentation. Internal fragmentation is the example just described, where a used memory block contains free memory. External fragmentation occurs when there is free space in between distributed memory blocks, which is too small to be used by other programs.
+
+One strategy for allocating memory is the \textit{Buddy Algorithm}, or buddy allocation, whose main strength is coalescing, described above. In this strategy, when a request for memory is made, the algorithm divides free memory in blocks of two until reaching the nearest available block that the requested memory fits in and returns it to the user. When freeing the memory, the algorithm will check to see if the "buddy", the other free block that was created in the last split, is also free, and if it is, the algorithm will merge the buddies together, and keep doing that until the buddy is not free.
+
+It is not immediately obvious why coalescing is fast using this strategy until you realise that finding the buddy of a memory block is very easy, because the memory address of the buddies only differ by one bit. This bit is located in the address at a spot determined by how large the memory block is, that is, at what level in the binary tree of blocks it is located. This all means that if you know the address of the block, and what level it is at, you only have to shift one bit to find the buddy of the block.
+
+Now, for each block to know these things about themselves (whether it is taken, and at what level it is), it is necessary for each block to contain information about itself. Thus, each block contains a header where such information is stored, and when a user gets access to a memory block, this header is hidden from the user.
+
+In this assignment, we were given the task of implementing a memory allocating library similar to \textit{malloc}, which uses the buddy algorithm. We received sample code and a walk-through of the methods present in the sample code, and were instructed to implement the two main algorithms: \code{find()}, which is called when requesting a new block, handling the division of the free memory and finding of a suitable block, and \code{insert()}, which is called when freeing memory and handles the coalescing of blocks. We were then asked to write a benchmarking program and run some benchmarks regarding the speed of these operations.
+
 \section{Implementation}
 
 \section{Benchmarking}
 
 \section{Discussion}
+
+\section{References}
+
+Kurslitt
+Instruktionerna
 
 \end{document}
