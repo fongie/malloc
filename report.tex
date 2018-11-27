@@ -1,13 +1,15 @@
 \documentclass{article}
 
+\usepackage{float}
+\usepackage{placeins}
+
 \def\code#1{\texttt{#1}}
 
 \begin{document}
 
-\title{The Buddy Algorithm \\
+\title{\vspace{-3.0cm}The Buddy Algorithm \\
 \medskip
-\large Seminarie 2 \\ 
-\medskip
+\large
 ID1206 Operativsystem }
 \author{Max Körlinge}
 \date{\today}
@@ -32,9 +34,100 @@ In this assignment, we were given the task of implementing a memory allocating l
 
 \section{Implementation}
 
-\section{Benchmarking}
+\subsection{Data Structures}
+
+There are two main data structures used in this implementation. The first is a \textit{free list}, an array, with one slot for each level in the binary memory tree. That is, depending on the maximum size of a memory block and the minimum, there will be a certain amount of possible levels from the largest block to the smallest block. Each level will have one slot in the array.
+
+The second data structure is the \textit{block header}, which is contained in each memory block, and has information on whether it is taken or free, what level it is on, and it is also part of a double-linked list. The double-linked list is necessary because there may be many free blocks at a certain level. This means that at each slot in the free list, you find the first block in a double-linked list of free blocks at that level.
+
+\subsection{find()}
+
+Our strategy in pseudo code:
+
+\noindent \code{	find(int level) \{  \\
+\hspace*{2em}	//find block at this level in free list, if not there, move up a level and check free list again \\
+\hspace*{2em}	//take first free block in list \\
+\hspace*{2em}	//make free list at that level point to next block in double-linked list at that level, or NULL if there is none \\
+\hspace*{2em} while (i != level) \{ //loop until at requsted level\\
+\hspace*{4em}        i--; //step down one level (we are splitting blocks), i is set to the level we found starting free block at \\
+\hspace*{4em}        freeblock->level = i; \\
+\hspace*{4em}        buddyToInsert = buddy(freeblock); //buddy to be free \\
+\hspace*{4em}        buddyToInsert->status = Free; \\
+\hspace*{4em}        buddyToInsert->level = i; \\
+\hspace*{4em}        buddyToInsert->next = freelist[i]; //buddy will be first in list on level i \\
+\hspace*{4em}        if (freelist[i] != NULL) \{  \\
+\hspace*{4em}            freelist[i]->prev = buddyToInsert; //previous first block will have buddy as previous \\
+\hspace*{4em}      \} \\
+\hspace*{4em}        freelist[i] = buddyToInsert; //buddy is inserted into list \\
+\hspace*{2em}    \} \\
+\hspace*{2em}    freeblock->status = Taken; \\
+\hspace*{2em}	return freeblock; \\
+	\}
+}
+
+Full implementation in C is at \code{https://github.com/fongie/malloc/blob/master/buddy.c\#L102}
+
+\subsection{insert()}
+Our strategy in pseudo code:
+
+\noindent \code{
+	insert(struct head *block) \{ \\
+\hspace*{2em}	//which level are you? \\
+\hspace*{2em}	//who is your buddy? \\
+\hspace*{2em}	if buddy is free \{ \\
+\hspace*{4em}		mergedBlock = merge(block,buddy) \\
+\hspace*{4em}		mergedBlock->level = level+1 \\
+\hspace*{4em}		removeFromFreeList(buddy) \\
+\hspace*{4em}		insert(mergedBlock) //recursive to keep merging until buddy not free \\
+\hspace*{4em}		return \\
+\hspace*{2em}	\} else \{ \\
+\hspace*{4em}		//place block in free list \\
+\hspace*{2em}	\} \\
+	\}
+}
+
+Full implementation in C is at \code{https://github.com/fongie/malloc/blob/master/buddy.c\#L185}
+\FloatBarrier
+\section{Results}
+
+\begin{table}[]
+\caption{0\% allocated compared to number of requested blocks}
+\begin{tabular}{llll}
+	size         & 2-4096     & 3000-4096   & 2-100         \\
+	balloc       & 0.00000168 & 0.000000426 & 0.000000553  \\
+	bfree        & 0.00000162 & 0.000000400 & 0.000000568 \\
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\caption{25\% allocated compared to number of requested blocks}
+\begin{tabular}{llll}
+size         & 2-4096     & 3000-4096   & 2-100         \\
+balloc       & 0.000000000556 & 0.000000000426 & 0.000000000457  \\
+bfree        & 0.000000000401 & 0.000000000523 & 0.000000000396  \\
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\caption{75\% allocated compared to number of requested blocks}
+\begin{tabular}{llll}
+size         & 2-4096     & 3000-4096   & 2-100         \\
+balloc       & 0.000000000442 & 0.000000000471 & 0.000000000458 \\
+bfree        & 0.000000000379 & 0.000000000408 & 0.000000000377 \\
+\end{tabular}
+\end{table}
+
+We wrote a benchmarking program at \code{https://github.com/fongie/malloc/blob/master/bench.c}. It studies how the algorithm performs under various circumstances, such as changing the size of the requested blocks, and whether there are already allocated blocks or not. To do this, we time the \code{balloc} and \code{bfree} operations 1000 times and return an average operation time, while changing these circumstances. You can find the results in Table 1, 2, and 3.
 
 \section{Discussion}
+
+The results show that the operation is at its slowest when allocating a block of memory for the first time. This is probably due to the fact that the first time a block of memory is allocated, the program has to build the binary tree and free list. When freeing the only block allocated, it is also slow, because it has to coalesce the entire binary tree all the way to the top.
+
+When some blocks have already been allocated, these algorithms do not have to work all the way to the top or the bottom, instead, the \code{balloc} algorithm can find a block at the requested level right away in the free list and return that, or the \code{bfree} algorithm could find when freeing a block that its buddy is taken and simply put itself in the free list, not performing any, or not so many, coalescing operations.
+
+Regarding size for \code{balloc}, in two out of three different allocations the bigger sizes are handled faster than smaller ones. This makes sense for when no blocks are allocated and when few are, because when you ask for larger sizes the algorithm can only go so far up in level before it either has to find a free block, or no free block. For \code{bfree}, results are the opposite. This is strange, because that algorithm should also work faster for larger blocks, for the same reason as above, that for larger blocks it never has to merge the maximum number of blocks, while it might happen for smaller blocks.
+
+The results are mostly as expected, and where they are not, the benchmarking program can probably be blamed. The benchmarking program could be improved to more randomly select which blocks to free, by for example storing allocated blocks in a list. Due to time constraints this was not implemented, which means that when freeing blocks, the double-linked list does not have be traversed in the \code{bfree} function, when removing a block from the free list. This operation should be quite costly, probably the most costly because it is the only time we are traversing a list, not just handling the head of the list, and this might not be reflected in the results that we got.
 
 \section{References}
 
